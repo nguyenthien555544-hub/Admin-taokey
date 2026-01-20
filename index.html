@@ -1,57 +1,78 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
-<meta charset="utf-8">
-<title>ADMIN KEY</title>
+<meta charset="UTF-8">
+<title>ADMIN KEY PANEL</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-body{background:#000;color:#0f0;font-family:monospace}
-.box{max-width:420px;margin:auto;border:2px solid #0f0;padding:10px}
-button,input,select{width:100%;margin:5px 0;padding:8px;background:#000;color:#0f0;border:1px solid #0f0}
+body{background:#000;color:#00ff66;font-family:monospace}
+.box{max-width:420px;margin:auto;border:2px solid #00ff66;padding:12px}
+input,select,button{width:100%;padding:10px;margin:6px 0;background:#000;color:#00ff66;border:1px solid #00ff66}
+.list{border:1px dashed #00ff66;padding:8px;margin-top:10px;font-size:13px}
+.key{border-bottom:1px dashed #00ff66;padding:6px 0}
 </style>
 </head>
 <body>
+
 <div class="box">
-<h3>ADMIN KEY</h3>
-<input id="k" placeholder="KEY">
-<select id="t">
+<h3>🔐 ADMIN KEY PANEL</h3>
+
+<input id="key" placeholder="KEY">
+<input id="device" placeholder="ID THIẾT BỊ (DEV-XXXX)">
+<select id="type">
 <option value="FREE">FREE (1 DAY)</option>
 <option value="VIP">VIP (VĨNH VIỄN)</option>
 </select>
-<button onclick="create()">TẠO</button>
-<hr>
-<div id="list"></div>
+
+<button onclick="createKey()">➕ TẠO KEY</button>
+
+<div class="list" id="list">Loading...</div>
 </div>
 
 <script>
-const S="https://admin-key-server.onrender.com";
+const SERVER="https://admin-key-server.onrender.com";
 
-async function load(){
- const d=await (await fetch(S+"/admin/keys")).json();
- list.innerHTML="";
+async function loadKeys(){
+ const r=await fetch(SERVER+"/admin/keys");
+ const d=await r.json();
+ let html="";
  Object.keys(d).forEach(k=>{
-  const e=d[k];
-  list.innerHTML+=`
-   <div>
-    🔑 ${k} | ${e.type}<br>
-    🆔 ${e.device||"chưa dùng"}<br>
-    ⏳ ${new Date(e.expire).toLocaleString()}
-    <button onclick="del('${k}')">X</button>
-   </div><hr>`;
+  html+=`
+  <div class="key">
+   <b>${k}</b><br>
+   🆔 ${d[k].device}<br>
+   🔑 ${d[k].type}
+   <button onclick="delKey('${k}')">❌</button>
+  </div>`;
  });
+ list.innerHTML=html||"Chưa có key";
 }
-async function create(){
- await fetch(S+"/admin/create",{method:"POST",
- headers:{'Content-Type':'application/json'},
- body:JSON.stringify({key:k.value,type:t.value})});
- load();
+
+async function createKey(){
+ if(!key.value||!device.value) return alert("Thiếu dữ liệu");
+ await fetch(SERVER+"/admin/create",{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({
+   key:key.value,
+   device:device.value,
+   type:type.value
+  })
+ });
+ key.value="";device.value="";
+ loadKeys();
 }
-async function del(x){
- await fetch(S+"/admin/delete",{method:"POST",
- headers:{'Content-Type':'application/json'},
- body:JSON.stringify({key:x})});
- load();
+
+async function delKey(k){
+ await fetch(SERVER+"/admin/delete",{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({key:k})
+ });
+ loadKeys();
 }
-load();
+
+loadKeys();
 </script>
 </body>
 </html>
