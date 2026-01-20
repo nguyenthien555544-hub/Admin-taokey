@@ -1,69 +1,87 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>ADMIN KEY</title>
+<title>ADMIN KEY PANEL</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 body{background:#000;color:#00ff66;font-family:monospace}
 .box{max-width:420px;margin:auto;border:2px solid #00ff66;padding:12px}
 input,select,button{width:100%;padding:10px;margin:6px 0;background:#000;color:#00ff66;border:1px solid #00ff66}
-.key{display:flex;justify-content:space-between}
+.list{border:1px dashed #00ff66;padding:8px;margin-top:10px;font-size:13px}
+.key{display:flex;flex-direction:column;border-bottom:1px dashed #00ff66;margin-bottom:6px;padding-bottom:6px}
+small{opacity:.8}
+button.del{border-color:#ff4444;color:#ff4444;margin-top:4px}
 </style>
 </head>
 <body>
 
 <div class="box">
-<h3>🔑 ADMIN PANEL</h3>
+<h3>🔐 ADMIN KEY PANEL</h3>
 
-<input id="key" placeholder="Key">
+<input id="key" placeholder="Key (VD: GA123VIP)">
+<input id="device" placeholder="Device ID (DEV-xxxx)">
 <select id="type">
-<option value="FREE">FREE</option>
-<option value="VIP">VIP</option>
+<option value="FREE">FREE (1 DAY)</option>
+<option value="VIP">VIP (VĨNH VIỄN)</option>
 </select>
 
-<input id="days" type="number" placeholder="Số ngày (FREE=1)">
-<button onclick="create()">TẠO KEY</button>
+<button onclick="createKey()">➕ TẠO KEY</button>
 
-<div id="list"></div>
+<div class="list" id="list">Loading...</div>
 </div>
 
 <script>
-const S="https://admin-key-server.onrender.com";
+const SERVER="https://admin-key-server.onrender.com";
 
-async function load(){
-  const d = await (await fetch(S+"/admin/keys")).json();
-  list.innerHTML = Object.keys(d).map(k=>{
-    let e=new Date(d[k].expire).toLocaleString();
-    return `<div class="key">
-      ${k} (${d[k].type}) ⏳ ${e}
-      <button onclick="del('${k}')">❌</button>
-    </div>`;
-  }).join("") || "Chưa có key";
+/* LOAD KEYS */
+async function loadKeys(){
+ const res=await fetch(SERVER+"/admin/keys");
+ const data=await res.json();
+ let html="";
+ Object.keys(data).forEach(k=>{
+  const v=data[k];
+  html+=`
+  <div class="key">
+   <b>${k} (${v.type})</b>
+   <small>📱 Device: ${v.device||"ALL"}</small>
+   <small>⏳ Expire: ${v.expire?new Date(v.expire).toLocaleString():"VĨNH VIỄN"}</small>
+   <button class="del" onclick="delKey('${k}')">❌ XÓA</button>
+  </div>`;
+ });
+ list.innerHTML=html||"Chưa có key";
 }
 
-async function create(){
-  await fetch(S+"/admin/create",{
-    method:"POST",
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      key:key.value,
-      type:type.value,
-      days:+days.value
-    })
-  });
-  load();
+/* CREATE KEY */
+async function createKey(){
+ if(!key.value||!device.value) return alert("Thiếu key hoặc device");
+ const res=await fetch(SERVER+"/admin/create",{
+  method:"POST",
+  headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({
+   key:key.value,
+   type:type.value,
+   device:device.value
+  })
+ });
+ const d=await res.json();
+ if(!d.ok) return alert(d.msg);
+ key.value="";device.value="";
+ loadKeys();
 }
 
-async function del(k){
-  await fetch(S+"/admin/delete",{
-    method:"POST",
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({key:k})
-  });
-  load();
+/* DELETE */
+async function delKey(k){
+ if(!confirm("Xóa key "+k+"?"))return;
+ await fetch(SERVER+"/admin/delete",{
+  method:"POST",
+  headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({key:k})
+ });
+ loadKeys();
 }
 
-load();
+loadKeys();
 </script>
 </body>
 </html>
