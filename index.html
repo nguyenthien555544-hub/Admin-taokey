@@ -1,110 +1,42 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>ADMIN PANEL – BOT GÀ CON</title>
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<style>
-body{background:#000;color:#00ff66;font-family:monospace}
-.app{max-width:500px;margin:auto;padding:15px;border:2px solid #00ff66}
-input,select,button{width:100%;padding:10px;margin:6px 0;background:#000;border:1px solid #00ff66;color:#00ff66}
-button.vip{border-color:#ffaa00;color:#ffaa00}
-button.danger{border-color:#ff4444;color:#ff4444}
-.box{border:1px dashed #00ff66;padding:10px;margin:10px 0;font-size:13px}
-table{width:100%;border-collapse:collapse;font-size:12px}
-th,td{border:1px solid #00ff66;padding:6px;text-align:center}
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center}
-.modalBox{border:2px solid #00ff66;padding:15px;width:300px;text-align:center}
-</style>
+  <meta charset="utf-8">
+  <title>Admin Key Panel</title>
 </head>
-
 <body>
-<div class="app">
-<h2 style="text-align:center">🔐 ADMIN PANEL</h2>
+<h2>ADMIN KEY</h2>
 
-<div class="box">
-<b>➕ TẠO KEY</b>
-<input id="device" placeholder="Device ID (bắt buộc)">
+<input id="device" placeholder="Device ID"><br>
+<input id="days" value="1"><br>
 <select id="type">
-<option value="FREE">FREE</option>
-<option value="VIP">VIP</option>
-</select>
-<input id="days" type="number" placeholder="Số ngày (vd: 1, 7, 30)">
+  <option>FREE</option>
+  <option>VIP</option>
+</select><br>
 <button onclick="createKey()">TẠO KEY</button>
-</div>
 
-<div class="box">
-<b>📋 DANH SÁCH KEY</b>
-<button onclick="loadKeys()">🔄 TẢI LẠI</button>
-<div id="list"></div>
-</div>
-</div>
-
-<!-- POPUP -->
-<div class="modal" id="modal">
-<div class="modalBox">
-<p id="modalText"></p>
-<button onclick="closeModal()">OK</button>
-</div>
-</div>
+<pre id="out"></pre>
 
 <script>
-const SERVER="https://admin-key-server.onrender.com";
+const SERVER = "https://YOUR-SERVER";
+const ADMIN_TOKEN = "ADMIN_123";
 
-function popup(t){
- modalText.innerText=t;
- modal.style.display="flex";
+function createKey() {
+  fetch(SERVER + "/admin/create-key", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-admin-token": ADMIN_TOKEN
+    },
+    body: JSON.stringify({
+      device: document.getElementById("device").value,
+      days: document.getElementById("days").value,
+      type: document.getElementById("type").value
+    })
+  })
+  .then(r => r.json())
+  .then(d => document.getElementById("out").innerText = JSON.stringify(d, null, 2));
 }
-function closeModal(){modal.style.display="none"}
-
-async function createKey(){
- const device=device.value.trim();
- const days=days.value;
- const type=type.value;
- if(!device||!days)return popup("Thiếu Device ID hoặc số ngày");
-
- const res=await fetch(SERVER+"/create-key",{
-  method:"POST",
-  headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({device,days,type})
- });
- const d=await res.json();
- if(!d.ok)return popup("❌ "+d.msg);
-
- popup("✅ TẠO KEY THÀNH CÔNG\n\n"+d.key+"\nHết hạn: "+new Date(d.expire).toLocaleString());
- loadKeys();
-}
-
-async function loadKeys(){
- const res=await fetch(SERVER+"/list");
- const data=await res.json();
-
- let html=`<table>
- <tr>
- <th>KEY</th><th>TYPE</th><th>DEVICE</th><th>HẾT HẠN</th><th>XÓA</th>
- </tr>`;
-
- data.forEach(k=>{
-  html+=`<tr>
-  <td>${k.key}</td>
-  <td>${k.type}</td>
-  <td>${k.device}</td>
-  <td>${new Date(k.expire).toLocaleString()}</td>
-  <td><button class="danger" onclick="delKey('${k.key}')">X</button></td>
-  </tr>`;
- });
-
- html+="</table>";
- list.innerHTML=html;
-}
-
-async function delKey(key){
- if(!confirm("Xóa key?"))return;
- await fetch(SERVER+"/delete/"+key);
- loadKeys();
-}
-
-loadKeys();
 </script>
 </body>
 </html>
