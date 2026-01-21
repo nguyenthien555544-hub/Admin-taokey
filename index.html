@@ -3,70 +3,75 @@
 <head>
 <meta charset="UTF-8">
 <title>ADMIN KEY PANEL</title>
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 body{background:#000;color:#00ff66;font-family:monospace}
-.box{max-width:420px;margin:auto;border:2px solid #00ff66;padding:12px}
-input,select,button{width:100%;padding:10px;margin:6px 0;background:#000;color:#00ff66;border:1px solid #00ff66}
-.key{display:flex;justify-content:space-between;margin:5px 0}
+.app{max-width:420px;margin:auto;padding:15px;border:2px solid #00ff66}
+input,select,button{
+ width:100%;padding:10px;margin:8px 0;
+ background:#000;border:1px solid #00ff66;color:#00ff66
+}
+button{cursor:pointer}
+.log{border:1px dashed #00ff66;padding:8px;margin-top:10px;font-size:13px}
 </style>
 </head>
+
 <body>
+<div class="app">
+<h2>🔑 ADMIN PANEL</h2>
 
-<div class="box">
-<h3>🔑 ADMIN PANEL</h3>
-
-<input id="device" placeholder="Device ID">
+<input id="device" placeholder="Device ID (VD: DEV-xxxx)">
 <select id="type">
-<option value="FREE">FREE (1 DAY)</option>
-<option value="VIP">VIP (VĨNH VIỄN)</option>
+<option value="FREE">FREE</option>
+<option value="VIP">VIP</option>
 </select>
-<input id="days" placeholder="Số ngày (FREE)" value="1">
+<input id="days" type="number" placeholder="Số ngày (0 = vĩnh viễn)">
 <button onclick="createKey()">➕ TẠO KEY</button>
 
-<hr>
-
-<div id="list">Loading...</div>
+<div class="log" id="log">Chưa có dữ liệu</div>
 </div>
 
 <script>
+/* ====== SERVER ====== */
 const SERVER="https://admin-key-server.onrender.com";
 
+/* ====== CREATE KEY ====== */
 async function createKey(){
- const res=await fetch(SERVER+"/create-key",{
-  method:"POST",
-  headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({
-   type:type.value,
-   days:days.value,
-   device:device.value
-  })
- });
- const d=await res.json();
- if(!d.ok) return alert(d.msg);
- alert("KEY: "+d.key);
- load();
-}
+ const device=device.value.trim();
+ const type=document.getElementById("type").value;
+ const days=document.getElementById("days").value||0;
 
-async function load(){
- const res=await fetch(SERVER+"/list");
- const data=await res.json();
- list.innerHTML="";
- data.forEach(k=>{
-  list.innerHTML+=`
-   <div class="key">
-    <span>${k.key}<br>${k.device}</span>
-    <button onclick="del('${k.key}')">❌</button>
-   </div>`;
- });
-}
+ if(!device) return alert("❌ Thiếu Device ID");
 
-async function del(k){
- await fetch(SERVER+"/delete/"+k);
- load();
+ log.innerText="⏳ Đang tạo key...";
+
+ try{
+  const res=await fetch(SERVER+"/admin/create-key",{
+   method:"POST",
+   headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({
+    device,
+    type,
+    days
+   })
+  });
+
+  const data=await res.json();
+
+  if(!data.ok){
+   log.innerText="❌ "+data.msg;
+   return;
+  }
+
+  log.innerHTML=
+   `✅ TẠO KEY THÀNH CÔNG<br>
+    🔑 KEY: <b>${data.key}</b><br>
+    ⏳ HẾT HẠN: ${new Date(data.expire).toLocaleString()}`;
+
+ }catch(err){
+  log.innerText="❌ Lỗi kết nối server";
+ }
 }
-load();
 </script>
-
 </body>
 </html>
