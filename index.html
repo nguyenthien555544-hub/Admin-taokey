@@ -37,18 +37,21 @@ const SERVER="https://admin-key-server.onrender.com";
 
 /* ====== CREATE KEY ====== */
 async function createKey(){
- const device=device.value.trim();
- const type=document.getElementById("type").value;
- const days=document.getElementById("days").value||0;
+ const device = document.getElementById("device").value.trim();
+ const type   = document.getElementById("type").value;
+ const days   = document.getElementById("days").value || 0;
 
- if(!device) return alert("❌ Thiếu Device ID");
+ if(!device){
+  alert("❌ Thiếu Device ID");
+  return;
+ }
 
  log.innerText="⏳ Đang tạo key...";
 
  try{
-  const res=await fetch(SERVER+"/admin/create-key",{
+  const res = await fetch(SERVER + "/admin/create-key",{
    method:"POST",
-   headers:{"Content-Type":"application/json"},
+   headers:{ "Content-Type":"application/json" },
    body:JSON.stringify({
     device,
     type,
@@ -56,14 +59,14 @@ async function createKey(){
    })
   });
 
-  const data=await res.json();
+  const data = await res.json();
 
   if(!data.ok){
-   log.innerText="❌ "+data.msg;
+   log.innerText="❌ " + data.msg;
    return;
   }
 
-  log.innerHTML=
+  log.innerHTML =
    `✅ TẠO KEY THÀNH CÔNG<br>
     🔑 KEY: <b>${data.key}</b><br>
     ⏳ HẾT HẠN: ${new Date(data.expire).toLocaleString()}`;
