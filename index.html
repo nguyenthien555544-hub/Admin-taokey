@@ -3,112 +3,90 @@
 <head>
 <meta charset="UTF-8">
 <title>ADMIN KEY PANEL</title>
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-body{background:#000;color:#00ff66;font-family:monospace}
-.box{max-width:420px;margin:auto;border:2px solid #00ff66;padding:14px}
-input,select,button{width:100%;padding:10px;margin:6px 0;background:#000;color:#00ff66;border:1px solid #00ff66}
-button{cursor:pointer}
-button.danger{border-color:#ff4444;color:#ff4444}
-.list{border:1px dashed #00ff66;padding:8px;margin-top:10px;font-size:13px}
-.key{display:flex;justify-content:space-between;align-items:center;margin:6px 0}
-.popup{
- position:fixed;inset:0;background:rgba(0,0,0,.8);
- display:none;align-items:center;justify-content:center
+body{
+ background:#000;color:#00ff66;
+ font-family:monospace;
+ display:flex;justify-content:center;align-items:center;height:100vh
 }
-.popupBox{border:2px solid #00ff66;padding:15px;width:280px;text-align:center}
+.box{
+ border:2px solid #00ff66;
+ padding:20px;width:320px
+}
+input,select,button{
+ width:100%;padding:10px;margin:6px 0;
+ background:#000;border:1px solid #00ff66;color:#00ff66
+}
+button{cursor:pointer}
+.log{margin-top:10px;font-size:13px;border-top:1px dashed #00ff66;padding-top:8px}
+.small{font-size:12px;opacity:.7}
 </style>
 </head>
-<body>
 
+<body>
 <div class="box">
 <h3>🔑 ADMIN KEY</h3>
 
-<input id="key" placeholder="Key (VD: VIP-ABC123)">
+<input id="key" placeholder="Key (để trống = auto)">
 <select id="type">
-<option value="FREE">FREE</option>
-<option value="VIP">VIP</option>
+ <option value="FREE">FREE</option>
+ <option value="VIP">VIP</option>
 </select>
 
-<input id="device" placeholder="ID thiết bị (DEV-xxxx)">
-<label>⏳ Hết hạn:</label>
-<input id="expire" type="datetime-local">
+<input id="days" type="number" placeholder="Số ngày (vd: 1, 7, 30)">
+<input id="device" placeholder="Device ID (bắt buộc)">
 
-<button onclick="createKey()">➕ TẠO KEY</button>
+<button onclick="createKey()">TẠO KEY</button>
 
-<div class="list" id="list">Loading...</div>
+<div class="log" id="log"></div>
+<div class="small">
+• Key gắn cứng theo Device ID<br>
+• Sai ID → không dùng được
 </div>
-
-<!-- POPUP -->
-<div class="popup" id="popup">
- <div class="popupBox">
-  <p id="popupText"></p>
-  <button onclick="closePopup()">OK</button>
- </div>
 </div>
 
 <script>
-const SERVER="https://admin-key-server.onrender.com";
-
-function showPopup(text){
- popupText.innerText=text;
- popup.style.display="flex";
-}
-function closePopup(){ popup.style.display="none"; }
-
-async function loadKeys(){
- const res = await fetch(SERVER+"/admin/keys");
- const data = await res.json();
- let html="";
- Object.keys(data).forEach(k=>{
-  const v=data[k];
-  html+=`
-   <div class="key">
-    <span>
-     ${k}<br>
-     ${v.type} | ${new Date(v.expire).toLocaleString()}<br>
-     🆔 ${v.device || "Chưa gắn"}
-    </span>
-    <button class="danger" onclick="delKey('${k}')">❌</button>
-   </div>`;
- });
- list.innerHTML = html || "Chưa có key";
-}
+const SERVER_URL="https://admin-key-server.onrender.com";
 
 async function createKey(){
- if(!key.value || !expire.value)
-  return showPopup("Nhập đủ key & hạn dùng");
+ const days=+daysInput.value||0;
+ const device=deviceInput.value.trim();
+ if(!days || !device) return alert("Thiếu số ngày hoặc Device ID");
 
- const res = await fetch(SERVER+"/admin/create",{
-  method:"POST",
-  headers:{ "Content-Type":"application/json" },
-  body:JSON.stringify({
-   key:key.value,
-   type:type.value,
-   device:device.value,
-   expire:new Date(expire.value).getTime()
-  })
- });
+ const body={
+  key:keyInput.value.trim()||null,
+  type:type.value,
+  days:days,
+  device:device
+ };
 
- const d = await res.json();
- if(!d.ok) return showPopup(d.msg);
+ try{
+  const res=await fetch(SERVER_URL+"/create",{
+   method:"POST",
+   headers:{'Content-Type':'application/json'},
+   body:JSON.stringify(body)
+  });
+  const d=await res.json();
+  if(!d.ok) return log.innerHTML="❌ "+d.msg;
 
- showPopup("✅ Tạo key thành công");
- key.value=""; device.value="";
- loadKeys();
+  log.innerHTML=
+  `✅ TẠO THÀNH CÔNG<br>
+   🔑 Key: <b>${d.key}</b><br>
+   🆔 ID: ${device}<br>
+   🏷 ${type.value}<br>
+   ⏳ Hết hạn: ${new Date(d.expire).toLocaleString()}`;
+ }catch(e){
+  log.innerHTML="❌ Lỗi kết nối server";
+ }
 }
 
-async function delKey(k){
- if(!confirm("Xóa key "+k+"?")) return;
- await fetch(SERVER+"/admin/delete",{
-  method:"POST",
-  headers:{ "Content-Type":"application/json" },
-  body:JSON.stringify({ key:k })
- });
- loadKeys();
-}
-
-loadKeys();
+/* alias input */
+const keyInput=document.getElementById("key");
+const type=document.getElementById("type");
+const daysInput=document.getElementById("days");
+const deviceInput=document.getElementById("device");
+const log=document.getElementById("log");
 </script>
 </body>
 </html>
